@@ -1,38 +1,36 @@
-Docker Shinken
-==============
+Docker Shinken:
+================
 
-This repository contains Dockerfile for automated builds of:
+This forked repository initially contained Dockerfile for automated builds for three different images available from:
 
 * Shinken: <https://registry.hub.docker.com/u/rohit01/shinken/>
 * shinken Thruk: <https://registry.hub.docker.com/u/rohit01/shinken_thruk/>
 * shinken Thruk Graphite: <https://registry.hub.docker.com/u/rohit01/shinken_thruk_graphite/>
 
-Get started in 3 easy steps:
-===========================
+But only shinken_basic has been updated and the image has not been pushed to the docker repository. The new versions are debian buster, shinken 2.4.3 and nrpe 3.2.1. 
 
-1. Install [docker](https://docs.docker.com/installation/#installation). Select and pull one of the following docker image:
 
-    * **Shinken**: It has basic shinken installation along with few must have modules like WebUI2 (Web Interface), standard nrpe plugins + few extra ones, nrpe-booster support and a lightweight web server (nginx). Link: <https://registry.hub.docker.com/u/rohit01/shinken/>
-    * **Shinken Thruk**: Shinken (as written above) + Thruk web interface. Internal web server nginx is replaced with apache2. Link: <https://registry.hub.docker.com/u/rohit01/shinken_thruk/>
-    * **Shinken Thruk Graphite**: Shinken Thruk (as written above) + graph support in WebUI2. Graphs are stored and served using graphite. Retention is configured for 1 month on a per 2 minute basis. Link: <https://registry.hub.docker.com/u/rohit01/shinken_thruk_graphite/>
+Get started:
+==============
 
-    Sample Command: `$ sudo docker pull rohit01/shinken`
+1. Clone this project. You will see a directory named: [custom_configs/](https://github.com/ghislainp/docker_shinken/tree/master/shinken_basic/custom_configs). Keep all your configuration files here. A default configuration for monitoring docker host is already defined. User login details can be updated in this file: [htpasswd.users](https://github.com/ghislainp/docker_shinken/blob/master/shinken_basic/custom_configs/htpasswd.users). File contains the documentation in comments.
 
-2. Clone this project. There are three directories corresponding to the docker images mentioned above. Go inside the directory corresponding to your selected image. You will see a directory named: [custom_configs/](https://github.com/rohit01/docker_shinken/tree/master/shinken_basic/custom_configs). Keep all your configuration files here. A default configuration for monitoring docker host is already defined. User login details can be updated in this file: [htpasswd.users](https://github.com/rohit01/docker_shinken/blob/master/shinken_basic/custom_configs/htpasswd.users). File contains the documentation in comments.
+2. Build the image.
 
+    ```
+    $ cd docker_shinken/shinken_basic
+    $ sudo docker build . - t shinken
+    ```
+    
 3. Run the docker image. Expose TCP port 80 to the base machine and mount custom_configs directory to /etc/shinken/custom_configs. Sample execution:
 
     ```
-    $ git clone https://github.com/rohit01/docker_shinken.git
-    $ cd docker_shinken/shinken_basic
-    $ sudo docker run -d -v "$(pwd)/custom_configs:/etc/shinken/custom_configs" -p 80:80 rohit01/shinken
+    $ sudo docker run -d -v "$(pwd)/custom_configs:/etc/shinken/custom_configs" -p 80:80 shinken
     ```
 
 Open your browser and visit these urls (Default credential - admin/admin):
 
-1. **WebUI2**: <http://localhost/>. Available on all three images.
-2. **Thruk UI**: <http://localhost/thruk/>. Available on shinken_thruk and shinken_thruk_graphite images.
-3. **Graphs**: <http://localhost/service/docker_shinken/http_port_7770#graphs>. Available only on shinken_thruk_graphite image.
+     **WebUI2**: <http://localhost/>. Available on all three images.
 
 ### Please Note:
 
@@ -82,3 +80,9 @@ which then can be conveniently added without having to work with lat and lng coo
 		  _LOC_LNG    -114.782483
 		  register    0
 		}
+
+
+Forked from:
+========================
+
+<https://github.com/rohit01/docker_shinken>

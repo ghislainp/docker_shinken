@@ -1,6 +1,6 @@
 # Shinken Docker installation using pip (latest)
-FROM        debian:wheezy
-MAINTAINER  Rohit Gupta
+FROM        debian:buster
+MAINTAINER  Rohit Gupta + Ghislain Picard
 
 # Install Shinken, Nagios plugins, nginx and supervisord
 RUN         apt-get update && apt-get install -y python-pip \
@@ -13,15 +13,24 @@ RUN         apt-get update && apt-get install -y python-pip \
                 libssl-dev \
                 python-crypto \
                 inotify-tools \
-                supervisor && \
-                apt-get -y autoremove && \
-                apt-get clean
+                supervisor \
+	        wget && \
+            apt-get -y autoremove && \
+            apt-get clean
+
 RUN         useradd --create-home shinken && \
-                pip install shinken pymongo>=3.0.3 requests arrow bottle==0.12.8 && \
+	    	mkdir /etc/shinken && \
+                wget https://github.com/naparuba/shinken/archive/2.4.3.tar.gz && \
+		tar xf 2.4.3.tar.gz && \
+		cd shinken-2.4.3 && \
+                python setup.py install && \
+		cd .. && \
+		rm -rf shinken-2.4.3 && \
                 update-rc.d -f shinken remove
 
 # Install shinken modules from shinken.io
 RUN         su - shinken -c 'shinken --init' && \
+		pip install pymongo>=3.0.3 requests arrow bottle==0.12.8 && \
                 su - shinken -c 'shinken install webui2' && \
                 su - shinken -c 'shinken install auth-htpasswd' && \
                 su - shinken -c 'shinken install sqlitedb' && \
@@ -29,14 +38,14 @@ RUN         su - shinken -c 'shinken --init' && \
                 su - shinken -c 'shinken install booster-nrpe'
 
 # Install check_nrpe plugin
-ADD         nrpe-2.15.tar.gz /usr/src/
-RUN         cd /usr/src/nrpe-2.15/ && \
+ADD         nrpe-3.2.1.tar.gz /usr/src/
+RUN         cd /usr/src/nrpe-3.2.1/ && \
                 ./configure --with-nagios-user=shinken --with-nagios-group=shinken --with-nrpe-user=shinken --with-nrpe-group=shinken --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu && \
                 make all && \
                 make install-plugin && \
                 mv /usr/local/nagios/libexec/check_nrpe /usr/lib/nagios/plugins/check_nrpe && \
                 cd / && \
-                rm -rf /usr/src/nrpe-2.15
+                rm -rf /usr/src/nrpe-3.2.1
 
 # Configure nginx
 ADD         shinken/shinken_nginx.conf /etc/nginx/sites-available/shinken_nginx.conf
@@ -74,6 +83,29 @@ ADD         supervisor/conf.d/* /etc/supervisor/conf.d/
 
 # Expost port 80 (nginx)
 EXPOSE  80
+
+ENV f /etc/shinken/custom_configs/htpasswd.users /etc/shinken/htpasswd.users
+
+# Add shinken config watcher to restart arbiter, when changes happen
+ADD         shinken/watch_shinken_config.sh /usr/bin/watch_shinken_config.sh
+RUN         chmod 755 /usr/bin/watch_shinken_config.sh
+
+# Copy extra NRPE plugins and fix permissions
+ADD         extra_plugins/* /usr/lib/nagios/plugins/
+RUN         cd /usr/lib/nagios/plugins/ && \
+                chmod a+x * && \
+                chmod u+s check_apt restart_service check_ping check_icmp check_fping apt_update
+
+# Define mountable directories
+VOLUME      ["/etc/shinken/custom_configs", "/usr/local/custom_plugins"]
+
+# configure supervisor
+ADD         supervisor/conf.d/* /etc/supervisor/conf.d/
+
+# Expost port 80 (nginx)
+EXPOSE  80
+
+ENV PERL5LIB /usr/lib/nagios/plugins
 
 # Default docker process
 CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf", "-n"]
